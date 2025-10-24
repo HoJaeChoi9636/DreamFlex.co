@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamflex Company: Interactive Presentation</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #FF6600;
+            --light-gray: #f0f0f0;
+            --animation-duration: 0.5s;
+            --animation-timing: ease-in-out;
+        }
+
+        /* --- 기본 스타일 및 폰트 설정 --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color); /* iframe 외부 배경이 아닌, 내부 기본 배경 */
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            /* 폰트가 렌더링되는 기준 뷰포트 크기를 설정합니다. */
+            font-size: 16px; 
+        }
+
+        /* --- 프레젠테이션 비율 유지를 위한 래퍼 (iframe 내부) --- */
+        /* 이 코드는 iframe 내부에서는 꽉 차게 보입니다. */
+        #presentation-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            /* iframe으로 삽입될 때는 wrapper가 아닌 container가 
+              최상위 크기 조절을 담당합니다.
+            */
+        }
+
+        #presentation-container {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            user-select: none;
+        }
+        #presentation-container:active {
+            cursor: grabbing;
+        }
+
+        /* --- 슬라이드 공통 스타일 (Fade Animation) --- */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            /* 패딩을 뷰포트 너비(vw) 대신 높이(vh) 기준으로 변경하여 세로가 좁을 때 여백이 줄어들게 함 */
+            padding: 4vh 5vw; 
+            box-sizing: border-box;
+            text-align: center;
+            opacity: 0;
+            transition: opacity var(--animation-duration) var(--animation-timing);
+            color: var(--text-color);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .slide.active {
+            opacity: 1;
+            z-index: 1;
+            pointer-events: auto;
+        }
+        
+        /* --- 슬라이드 개별 콘텐츠 스타일 (폰트 크기 수정) --- */
+        /* 모바일 세로 모드(높이가 매우 좁은 환경)를 위해 
+          clamp()의 최소값을 대폭 수정합니다.
+        */
+        .slide h1, .slide h2, .slide h3 {
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            word-break: keep-all;
+        }
+        
+        /* 폰트 최소 크기를 줄임 (rem 단위) */
+        .slide h1 { font-size: clamp(1.4rem, 5vw, 5rem); }
+        .slide h2 { font-size: clamp(1.2rem, 4vw, 3.5rem); }
+        .slide h3 { font-size: clamp(1.1rem, 3.5vw, 3rem); color: var(--accent-color); }
+        .slide p { 
+            font-size: clamp(0.75rem, 1.8vw, 1.5rem); 
+            line-height: 1.7; /* 줄간격도 살짝 줄임 */
+            margin-top: 2vh; /* 상단 마진을 뷰포트 높이 비례로 변경 */
+            max-width: 90%; /* 최대 너비를 늘려서 좁은 화면에 대응 */
+            word-break: keep-all; 
+        }
+        .slide .subtitle { 
+            font-size: clamp(0.8rem, 2vw, 1.8rem); 
+            margin-top: 1vh; 
+            font-weight: 400; 
+            color: #666;
+        }
+
+        .highlight {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+        
+        .slide .subtitle.highlight {
+            color: var(--accent-color);
+        }
+
+        /* --- 콘텐츠 애니메이션 --- */
+        .content-item {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .slide.active .content-item { opacity: 1; transform: translateY(0); }
+        .slide.active .content-item:nth-child(1) { transition-delay: 0.3s; }
+        .slide.active .content-item:nth-child(2) { transition-delay: 0.5s; }
+        .slide.active .content-item:nth-child(3) { transition-delay: 0.7s; }
+        .slide.active .content-item:nth-child(4) { transition-delay: 0.9s; }
+
+
+        .worries {
+            margin-top: 3vh; /* 뷰포트 높이 비례 */
+            display: flex;
+            gap: 1.5vh; /* 뷰포트 높이 비례 */
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .worry-box {
+            background: #f8f8f8;
+            border-radius: 10px;
+            padding: 1vh 1.5vw; /* 패딩 축소 */
+            font-size: clamp(0.7rem, 1.5vw, 1.3rem); /* 폰트 최소 크기 축소 */
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .promise-container {
+            margin-top: 3vh; /* 뷰포트 높이 비례 */
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            gap: 2vw;
+        }
+        .promise-item {
+            flex: 1;
+            max-width: 40%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 15px;
+            padding: 2vh 1.5vw; /* 패딩 축소 */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+         .promise-item p { 
+            font-size: clamp(0.7rem, 1.6vw, 1.4rem); /* 폰트 최소 크기 축소 */
+            margin-top: 0;
+        }
+
+        .text-container {
+            background-color: #f9f9f9;
+            border-radius: 15px;
+            padding: 2vh 3vw; /* 패딩 축소 */
+            margin-top: 2vh; /* 뷰포트 높이 비례 */
+            max-width: 90%; /* 최대 너비 확장 */
+            border: 1px solid #eee;
+            text-align: center;
+        }
+        .text-container p {
+            margin-top: 0;
+            max-width: 100%;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh; /* 뷰포트 높이 비례 */
+            margin-top: 3vh; /* 뷰포트 높이 비례 */
+            width: 85%; /* 너비 확장 */
+        }
+        .step {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 1vh 1.5vw; /* 패딩 축소 */
+            text-align: left;
+            font-size: clamp(0.75rem, 1.7vw, 1.4rem); /* 폰트 최소 크기 축소 */
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            border: 1px solid #eee;
+        }
+        .step .step-number {
+            color: var(--accent-color);
+            font-weight: 800;
+            font-size: clamp(0.9rem, 2vw, 1.8rem); /* 폰트 최소 크기 축소 */
+            margin-right: 1rem;
+            min-width: 40px; /* 최소 너비 축소 */
+            text-align: right;
+        }
+        
+        .contact-info {
+            margin-top: 3vh; /* 뷰포트 높이 비례 */
+            font-size: clamp(0.75rem, 1.5vw, 1.3rem); /* 폰트 최소 크기 축소 */
+            line-height: 2.2; /* 줄간격 축소 */
+            text-align: left;
+            display: inline-block;
+        }
+        .contact-info strong {
+            display: inline-block;
+            width: 80px; /* 너비 축소 */
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        .contact-info a { color: var(--text-color); text-decoration: none; }
+        .contact-info a:hover { color: var(--accent-color); }
+        
+        /* --- 네비게이션 화살표 --- */
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px; /* 크기 축소 */
+            height: 40px; /* 크기 축소 */
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, background-color 0.3s, opacity 0.3s;
+            color: var(--text-color);
+        }
+        .nav-arrow:hover {
+            transform: translateY(-50%) scale(1.1);
+            background-color: white;
+        }
+        .nav-arrow.hidden { opacity: 0; pointer-events: none; }
+        #prev-arrow { left: 15px; } /* 위치 조정 */
+        #next-arrow { right: 15px; } /* 위치 조정 */
+        .nav-arrow svg { width: 20px; height: 20px; } /* 아이콘 크기 축소 */
+        
+        /* --- 하단 컨트롤 UI --- */
+        #bottom-controls {
+            position: absolute;
+            bottom: 15px; /* 위치 조정 */
+            left: 15px; /* 위치 조정 */
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 15px; /* 간격 조정 */
+        }
+        #page-counter {
+            color: #aaa;
+            font-size: clamp(0.7rem, 1.5vw, 1rem); /* 폰트 최소 크기 축소 */
+            font-weight: 500;
+        }
+        #tts-button {
+            background: none; border: none; cursor: pointer; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #tts-button svg {
+            width: 20px; /* 아이콘 크기 축소 */
+            height: 20px; /* 아이콘 크기 축소 */
+            color: #aaa;
+            transition: color 0.3s, transform 0.3s;
+        }
+        #tts-button:hover svg { color: var(--accent-color); transform: scale(1.1); }
+        #tts-button.loading svg { animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .drag-indicator {
+            position: absolute;
+            bottom: 15px; /* 위치 조정 */
+            right: 15px; /* 위치 조정 */
+            z-index: 10;
+            color: #aaa;
+            font-size: clamp(0.6rem, 1.2vw, 0.9rem); /* 폰트 최소 크기 축소 */
+            font-weight: 500;
+            animation: fade-in-out 3s ease-in-out forwards;
+            opacity: 0;
+        }
+        @keyframes fade-in-out { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <!-- 
+      iframe 내부에서는 presentation-wrapper가 아닌
+      presentation-container가 실질적인 최상위 요소입니다.
+      (wrapper는 16:9 비율을 맞추기 위해 사용되었으나, 
+      iframe으로 삽입되면서 그 역할이 외부 wrapper로 넘어갔습니다.)
+    -->
+    <div id="presentation-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <h1 class="content-item">Dreamflex Co.</h1>
+            <p class="subtitle content-item highlight">성공적인 행사를 위한 가장 든든한 파트너</p>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <h2 class="content-item">행사를 열기로 마음먹었는데,<br>막상 시작하려니 막막하시죠?</h2>
+            <div class="worries content-item">
+                <div class="worry-box">'어떤 조명을 써야 분위기가 살지?'</div>
+                <div class="worry-box">'음향 사고가 나면 어떡하지?'</div>
+                <div class="worry-box">'실력 있는 전문가는 어디서 찾아야 하지?'</div>
+            </div>
+            <p class="content-item">꼬리에 꼬리를 무는 질문에, 설레었던 마음이 어느새 무거운 고민이 되곤 합니다.</p>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide">
+            <h2 class="content-item">괜찮습니다. <br> 이제 그 복잡한 고민은 저희에게 맡겨주세요.</h2>
+            <p class="content-item">고객님은 행사를 통해 이루고 싶은 <span class="highlight">'목표'</span>에만 집중하세요. <br>그 목표가 최고의 현실이 되도록, 전 과정을 저희 드림플랙스 컴퍼니가 책임지겠습니다.</p>
+        </div>
+
+        <!-- Slide 4: Our Promise -->
+        <div class="slide">
+            <h2 class="content-item">드림플랙스만의 특별한 약속</h2>
+            <div class="promise-container content-item">
+                <div class="promise-item">
+                    <h3>세심한 기획</h3>
+                    <p>고객님의 기대를 뛰어넘는<br>마음을 움직이는 경험을 디자인합니다.</p>
+                </div>
+                <div class="promise-item">
+                    <h3>빈틈없는 실행</h3>
+                    <p>어떤 상황에도 흔들림 없는<br>완벽한 실행력으로 증명합니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Promise Detail 1 -->
+        <div class="slide">
+             <h3 class="content-item">1. 마음을 움직이는 세심한 기획</h3>
+             <div class="text-container content-item">
+                <p>성공적인 행사는 참석한 사람들의 기억에 오래 남아야 합니다. 저희는 고객님의 이야기에 귀 기울여, 행사의 목적에 꼭 맞는 <span class="highlight">특별한 경험</span>을 디자인합니다.<br><br>평범한 공간이라도 최적의 조명, 마음에 스며드는 음악, 모두의 눈길을 사로잡는 영상으로<br>세상에 단 하나뿐인 무대를 만들어 드립니다.</p>
+             </div>
+        </div>
+        
+        <!-- Slide 6: Promise Detail 2 -->
+        <div class="slide">
+            <h3 class="content-item">2. 걱정을 덜어드리는 빈틈없는 실행</h3>
+            <div class="text-container content-item">
+                <p>아무리 좋은 기획이라도 실행이 받쳐주지 못하면 소용없습니다. 저희는 수많은 경험과 체계적인 시스템으로 어떤 돌발 상황에서도 완벽한 행사를 만들어냅니다.<br><br>각 분야 최고의 실력을 갖춘 음향, 조명, 영상 전문가로 <span class="highlight">최고의 '드림 팀'</span>을 구성하고<br>모든 과정을 책임지겠습니다.</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: The 5-Step Process -->
+        <div class="slide">
+            <h2 class="content-item">성공적인 행사로 가는 5단계 과정</h2>
+            <div class="steps-container content-item">
+                <div class="step" style="transition-delay: 0.2s;"><span class="step-number">Step 1</span> 목표와 비전 공유하기</div>
+                <div class="step" style="transition-delay: 0.3s;"><span class="step-number">Step 2</span> 전략과 컨셉 설계하기</div>
+                <div class="step" style="transition-delay: 0.4s;"><span class="step-number">Step 3</span> 꼼꼼하게 준비하고 점검하기</div>
+                <div class="step" style="transition-delay: 0.5s;"><span class="step-number">Step 4</span> 완벽하게 현장 실행하기</div>
+                <div class="step" style="transition-delay: 0.6s;"><span class="step-number">Step 5</span> 결과 보고 및 마무리하기</div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Philosophy -->
+        <div class="slide">
+            <h2 class="content-item">고객님의 비전,<br>최고의 결과물로 실현됩니다.</h2>
+            <div class="text-container content-item">
+                <p>드림플랙스는 어려운 전문 용어 대신, 진심을 담은 소통과 믿을 수 있는 실력으로 이야기합니다.<br>고객님의 목표를 함께 고민하고 성공적인 결과를 만들어내는 <span class="highlight">든든한 파트너</span>가 되겠습니다.</p>
+            </div>
+        </div>
+        
+        <!-- Slide 9: Call to Action / Contact -->
+        <div class="slide">
+            <h2 class="content-item">첫걸음인 기획부터 함께하겠습니다.<br>편하게 연락 주세요.</h2>
+            <div class="contact-info content-item">
+                <strong>대표</strong> 전승일<br>
+                <strong>전화번호</strong> <a href="tel:010-4634-8660">010-4634-8660</a><br>
+                <strong>이메일</strong> <a href="mailto:dreamflex_official@naver.com">dreamflex_official@naver.com</a><br>
+                <strong>홈페이지</strong> <a href="http://dreamflex.co.kr" target="_blank">dreamflex.co.kr</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 
+      iframe 내부에서는 wrapper가 없으므로 
+      네비게이션/컨트롤의 위치는 container를 기준으로 합니다.
+    -->
+    <div id="prev-arrow" class="nav-arrow">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+    </div>
+    <div id="next-arrow" class="nav-arrow">
+         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+    </div>
+    
+    <div id="bottom-controls">
+        <div id="page-counter"></div>
+        <button id="tts-button" title="슬라이드 내용 듣기">
+             <svg id="tts-icon-play" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" /></svg>
+        </button>
+    </div>
+    <div class="drag-indicator">&lt; Drag or Swipe &gt;</div>
+
+    <script>
+        const container = document.getElementById('presentation-container');
+        const slides = document.querySelectorAll('.slide');
+        const prevArrow = document.getElementById('prev-arrow');
+        const nextArrow = document.getElementById('next-arrow');
+        const pageCounter = document.getElementById('page-counter');
+        const ttsButton = document.getElementById('tts-button');
+
+        let currentSlide = 0;
+        let isDragging = false;
+        let startPosX = 0;
+        const dragThreshold = 50;
+        let currentAudio = null;
+
+        function updateArrows() {
+            prevArrow.classList.toggle('hidden', currentSlide === 0);
+            nextArrow.classList.toggle('hidden', currentSlide === slides.length - 1);
+        }
+
+        function updatePageCounter() {
+            pageCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+        }
+        
+        function goToSlide(slideIndex) {
+            if (slideIndex < 0 || slideIndex >= slides.length || slideIndex === currentSlide) return;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            ttsButton.classList.remove('loading');
+
+            slides[currentSlide].classList.remove('active');
+            slides[slideIndex].classList.add('active');
+            
+            currentSlide = slideIndex;
+            updateArrows();
+            updatePageCounter();
+        }
+
+        function nextSlide() { goToSlide(currentSlide + 1); }
+        function prevSlide() { goToSlide(currentSlide - 1); }
+        
+        function dragStart(e) {
+            isDragging = true;
+            startPosX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+        }
+
+        function dragEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const endPosX = e.type.includes('mouse') ? e.pageX : e.changedTouches[0].clientX;
+            const movedBy = endPosX - startPosX;
+
+            if (movedBy < -dragThreshold) nextSlide();
+            else if (movedBy > dragThreshold) prevSlide();
+        }
+
+        prevArrow.addEventListener('click', prevSlide);
+        nextArrow.addEventListener('click', nextSlide);
+        container.addEventListener('mousedown', dragStart);
+        container.addEventListener('mouseup', dragEnd);
+        container.addEventListener('mouseleave', dragEnd);
+        container.addEventListener('touchstart', dragStart, { passive: true });
+        container.addEventListener('touchend', dragEnd);
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            else if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // --- TTS Feature ---
+        const apiKey = ""; // API 키는 비워두세요.
+
+        ttsButton.addEventListener('click', async () => {
+            if (ttsButton.classList.contains('loading')) return;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                return;
+            }
+
+            const activeSlide = document.querySelector('.slide.active');
+            const textToSpeak = Array.from(activeSlide.querySelectorAll('h1, h2, h3, p, .worry-box, .step'))
+                .map(el => el.textContent.trim()).join('. ');
+
+            if (!textToSpeak.trim()) return;
+            
+            ttsButton.classList.add('loading');
+
+            const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            const ttsPayload = {
+                contents: [{ parts: [{ text: `Say in a professional and informative tone: ${textToSpeak}` }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } // 남성 목소리
+                    }
+                },
+            };
+            
+            let retries = 3;
+            let success = false;
+            while (retries > 0 && !success) {
+                try {
+                    const response = await fetch(ttsApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(ttsPayload)
+                    });
+                    if (!response.ok) {
+                         if (response.status === 429 || response.status >= 500) {
+                            // 429 (Too Many Requests) 또는 5xx (Server Error)일 때 재시도
+                            throw new Error(`Retryable TTS API Error: ${response.statusText}`);
+                        } else {
+                            // 그 외 에러는 재시도하지 않음
+                            throw new Error(`Non-retryable TTS API Error: ${response.statusText}`);
+                        }
+                    }
+                    
+                    const result = await response.json();
+                    const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    const mimeType = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                        const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                        const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
+                        const pcmData = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmData);
+                        const wavBlob = pcmToWav(pcm16, 1, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        
+                        currentAudio = new Audio(audioUrl);
+                        currentAudio.play();
+                        currentAudio.onended = () => { currentAudio = null; };
+                        success = true; // 성공 플래그
+
+                    } else {
+                        throw new Error("Invalid audio data received.");
+                    }
+                } catch (error) {
+                    console.error("TTS failed, retries left:", retries - 1, error);
+                    retries--;
+                    if (retries > 0) {
+                        // Exponential backoff: 1s, 2s
+                        await new Promise(resolve => setTimeout(resolve, (3 - retries) * 1000));
+                    } else {
+                        // 최종 실패
+                         console.error("TTS failed after all retries:", error);
+                    }
+                }
+            } // end while
+
+            ttsButton.classList.remove('loading');
+        });
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, numChannels, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcmData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * 2, true);
+            view.setUint16(32, numChannels * 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcmData.length * 2, true);
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(44 + i * 2, pcmData[i], true);
+            }
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // --- 초기화 ---
+        updateArrows();
+        updatePageCounter();
+
+    </script>
+</body>
+</html>
+
