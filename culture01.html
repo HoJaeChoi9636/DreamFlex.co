@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>문화부원 전시 관람 가이드</title>
+    <!-- 폰트: Noto Sans KR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            word-break: keep-all;
+            background-color: white;
+            color: black;
+        }
+
+        /* 슬라이드 스타일 및 애니메이션 */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+            transform: translateY(20px);
+            z-index: 0;
+            pointer-events: none;
+            display: flex; /* Flexbox 보장 */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        /* 활성화된 슬라이드 */
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        /* 스크롤바 숨김 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 메뉴 오버레이 */
+        #menu-overlay {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen">
+
+    <!-- 상단 헤더 -->
+    <header class="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-50">
+        <div class="text-xs font-bold tracking-widest uppercase">
+            Cultural Dept. Guide
+        </div>
+        <button id="menu-btn" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+    </header>
+
+    <!-- 진행바 -->
+    <div class="absolute top-0 left-0 w-full h-1 bg-gray-100 z-50">
+        <div id="progress-bar" class="h-full bg-black transition-all duration-300" style="width: 0%"></div>
+    </div>
+
+    <!-- 메인 슬라이드 영역 -->
+    <main id="slides-container" class="w-full h-full relative max-w-6xl mx-auto">
+        <!-- 자바스크립트로 슬라이드가 여기에 생성됩니다 -->
+    </main>
+
+    <!-- 하단 네비게이션 (데스크탑) -->
+    <div class="hidden md:flex absolute bottom-8 right-8 gap-4 z-50">
+        <button id="prev-btn" class="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-colors disabled:opacity-30">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="next-btn" class="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-colors disabled:opacity-30">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <!-- 슬라이드 번호 -->
+    <div id="slide-counter" class="absolute bottom-8 left-8 text-xs font-mono text-gray-400 z-50">
+        00 — 00
+    </div>
+
+    <!-- 메뉴 오버레이 -->
+    <div id="menu-overlay" class="fixed inset-0 bg-white z-[60] opacity-0 pointer-events-none flex flex-col p-8">
+        <div class="flex justify-end mb-8">
+            <button id="close-menu-btn" class="p-2 hover:bg-gray-100 rounded-full">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <nav class="flex-1 overflow-y-auto no-scrollbar max-w-3xl mx-auto w-full">
+            <ul id="menu-list" class="space-y-4"></ul>
+        </nav>
+    </div>
+
+    <script>
+        // 데이터 정의
+        const slidesData = [
+            {
+                type: "title",
+                title: "문화부원으로서\n전시 관람하기",
+                content: "",
+                sub: "학습목표: 전시 관람 목적과 방법을 이해하고, 문화부원으로서 전시회를 관람하며 다양한 표현 방식과 느낌을 하늘문화에 적용합니다."
+            },
+            {
+                type: "list",
+                title: "목차",
+                items: [
+                    "들어가는 말",
+                    "전시 관람의 목적",
+                    "전시 관람 방법",
+                    "문화부원으로서의 전시 관람 자세",
+                    "마치는 말"
+                ]
+            },
+            {
+                type: "simple",
+                title: "들어가는 말",
+                content: "미술대학을 졸업한 발표자의 경험에 기반한 전시 관람 노하우를 공유하고자 합니다.\n\n어떻게 하면 전시를 보고 난 후 사진이 아닌 경험이 남을 수 있을지 고민했으니, 잘 들어보고 시도해 보시길 바랍니다."
+            },
+            {
+                type: "split",
+                section: "전시 관람의 목적",
+                title: "1) 개인으로서의 목적",
+                content: "개인으로서 삶을 살아가며 느끼는 감정을 다양한 형태로 구체화하는 것입니다.\n\n우리가 매 순간 느끼는 다양한 감정은 문자와 말로 전부 표현할 수 없습니다. 예술은 문자 언어라는 틀에 가둘 수 없는 나의 감정을 대변하는 또 다른 언어이자 ‘말’이 되어줍니다."
+            },
+            {
+                type: "split",
+                section: "전시 관람의 목적",
+                title: "2) 창작자로서의 목적",
+                content: "직접 경험하지 못한 다양한 표현 방식과 그 효과를 체험하는 것입니다."
+            },
+            {
+                type: "step",
+                step: "0",
+                title: "관람하는 ‘나’ 분석하기",
+                content: "가장 먼저 파악해야 하는 것은 전시를 바라보는 주체인 ‘나’ 자신입니다.\n\n내가 놓인 상황, 함께하는 사람, 하고 있는 고민, 감정 상태에 따라 작품은 나에게 다르게 다가옵니다."
+            },
+            {
+                type: "step",
+                step: "1",
+                title: "작품을 있는 그대로 느끼기",
+                content: "나를 파악했다면 지금의 나로서 작품을 바라봅니다.\n\n객관적일 필요 없고 객관적일 수 없습니다. 지금의 내가 이 작품을 바라보고 느끼는 것들을 적어봅니다."
+            },
+            {
+                type: "step",
+                step: "2",
+                title: "주관적으로 작품 분석하기",
+                content: "작품의 첫 느낌을 적었다면, 이제 그 느낌을 만들어내는 요소들을 찾아봅니다.\n\n이 작품의 어떤 요소가, 어떤 표현이, 어떤 형태가, 어떤 색이, 또 그러한 요소들의 조합이 내게 그 느낌을 주었는지 지극히 주관적으로 분석하고 적어봅니다."
+            },
+            {
+                type: "step",
+                step: "3",
+                title: "작가에 대해 알아보기",
+                content: "이제 이 작품을 제작한 작가에 대해 알아봅니다.\n\n전시장에 있는 작가 정보를 확인하거나 인터넷에 검색해 봅니다. 이 단계는 생략해도 무관합니다."
+            },
+            {
+                type: "step",
+                step: "4",
+                title: "작가의 의도 유추하기",
+                content: "작가가 가진 가치관과 거쳐온 삶을 토대로 내가 작가라면 이 작품을 어떤 의도로 만들었을지 유추해 봅니다.\n\n단순히 표현의 탐구였을까요? 감정의 표출일까요? 어떤 감정일까요? 메시지를 전달하고 싶었을까요? 어떤 메시지일까요?"
+            },
+            {
+                type: "step",
+                step: "5",
+                title: "작가의 의도 확인하기",
+                content: "이제 텍스트를 읽고 작가의 의도와 나의 예상을 비교해 봅니다.\n\n같을 필요 없고, 같을 수도 없습니다."
+            },
+            {
+                type: "step",
+                step: "6",
+                title: "전시에 대한 주관적인\n평가와 피드백",
+                content: "위에 적은 내용을 토대로 종합적인 작품에 대한 주관적인 평가와 나라면 어떻게 했을지 피드백을 적어봅니다.\n\n의도가 나에게 전달되지 않았다면 어떤 표현이 문제였는지, 나라면 어떻게 표현했을지 적어봅니다.\n\n표현이, 표현과 표현의 조합이 어떤 느낌을 만들어내는지 새롭게 알게 된 사실을 기록합니다."
+            },
+            {
+                type: "simple",
+                title: "문화부원으로서의\n전시 관람 자세",
+                content: "문화부는 어떤 사명일까요? 우리는 표현 방식을 탐구하는 사명이 아니라 하늘의 뜻을 표현에 담아 전달해야 하는 사명입니다.\n\n하늘의 것은 좋게 느끼게 하고, 사단의 것은 안 좋게 느끼게 해야 합니다. 느낌을 의도하고 표현을 계산할 줄 알아야 합니다.\n\n전시를 관람한다는 것은 내가 사용해보지 못한 표현들, 내가 경험해보지 못한 표현들과 표현과 표현의 조합에 대한 선례를 보는 일입니다. 선례를 통해 느낌말들을 수집하고 교회와 전도 현장에서 있어지는 다양한 상황들 속 다양한 마음 가운데 하나님의 말씀을 좋은 느낌으로 전달할 수 있도록 고민하고 적용해 봅시다.\n\n세상의 작품은 부정적인 감정과 느낌을 다루는 경우가 많습니다. 무분별하게 멋지다, 힙하다라고 생각하지 않고 비판적으로 하늘문화에 적용할 수 있는지 생각하며 평가하면 좋을 것입니다. 또한 밝고 긍정적인 감정을 다루는 작품이 있다면 잘 분석하고 기록하여 참고해야 할 것입니다."
+            },
+            {
+                type: "title",
+                title: "마치는 말",
+                content: "",
+                sub: "발표자의 경험을 기반한 주관적인 교육입니다. 절대적으로 따를 필요는 없지만 각자의 사명에 좋은 참고가 되었길 바라며 교육을 마칩니다."
+            }
+        ];
+
+        // 상태 변수
+        let currentSlide = 0;
+        const totalSlides = slidesData.length;
+
+        // DOM 요소
+        const container = document.getElementById('slides-container');
+        const progressBar = document.getElementById('progress-bar');
+        const counterEl = document.getElementById('slide-counter');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        // 텍스트 줄바꿈 처리
+        function formatText(text) {
+            return text ? text.replace(/\n/g, '<br/>') : '';
+        }
+
+        // 초기화 및 렌더링
+        function init() {
+            slidesData.forEach((data, index) => {
+                const slide = document.createElement('div');
+                slide.className = 'slide';
+                slide.id = `slide-${index}`;
+                
+                let html = '';
+
+                // 레이아웃 타입별 HTML 생성
+                if (data.type === 'title') {
+                    html = `
+                        <div class="max-w-4xl w-full px-6">
+                            <h1 class="text-4xl md:text-7xl font-black mb-10 leading-tight">${formatText(data.title)}</h1>
+                            <div class="w-16 h-1 bg-black mb-10"></div>
+                            <p class="text-lg md:text-xl text-gray-600 font-light leading-relaxed">${formatText(data.sub)}</p>
+                        </div>
+                    `;
+                } else if (data.type === 'list') {
+                    const items = data.items.map((item, i) => `
+                        <li class="flex items-start text-xl md:text-3xl font-bold mb-6">
+                            <span class="text-sm font-mono text-gray-400 mr-6 mt-1">${(i+1).toString().padStart(2,'0')}</span>
+                            <span>${item}</span>
+                        </li>
+                    `).join('');
+                    html = `
+                        <div class="max-w-4xl w-full px-6">
+                            <h2 class="text-xs font-bold text-gray-400 tracking-widest uppercase mb-12 border-b pb-4">Index</h2>
+                            <ul>${items}</ul>
+                        </div>
+                    `;
+                } else if (data.type === 'step') {
+                    html = `
+                        <div class="max-w-5xl w-full px-6 flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-20">
+                            <div class="text-8xl md:text-[180px] font-black text-gray-100 leading-none font-mono select-none">
+                                ${data.step}
+                            </div>
+                            <div class="flex-1 pt-4">
+                                <h2 class="text-2xl md:text-5xl font-bold mb-8 leading-snug">${formatText(data.title)}</h2>
+                                <div class="text-base md:text-lg text-gray-600 leading-loose font-normal space-y-4">
+                                    ${formatText(data.content)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (data.type === 'split') {
+                    html = `
+                        <div class="max-w-4xl w-full px-6">
+                            <span class="inline-block px-3 py-1 border border-black rounded-full text-xs font-bold mb-8">${data.section}</span>
+                            <h2 class="text-3xl md:text-5xl font-bold mb-8 leading-tight">${formatText(data.title)}</h2>
+                            <p class="text-base md:text-lg text-gray-600 leading-loose">${formatText(data.content)}</p>
+                        </div>
+                    `;
+                } else {
+                    html = `
+                        <div class="max-w-4xl w-full px-6">
+                            <h2 class="text-3xl md:text-6xl font-bold mb-10 leading-tight">${formatText(data.title)}</h2>
+                            <div class="text-base md:text-lg text-gray-600 leading-loose mb-10">${formatText(data.content)}</div>
+                            ${data.sub ? `<div class="pt-8 border-t text-gray-500 text-sm">${data.sub}</div>` : ''}
+                        </div>
+                    `;
+                }
+
+                slide.innerHTML = html;
+                container.appendChild(slide);
+
+                // 메뉴 아이템 추가
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <button onclick="goToSlide(${index})" class="text-left w-full py-2 text-xl md:text-2xl font-bold text-gray-300 hover:text-black transition-colors">
+                        <span class="text-sm font-mono mr-4 text-gray-400">${(index+1).toString().padStart(2,'0')}</span>
+                        ${data.title.replace(/\n/g, ' ')}
+                    </button>
+                `;
+                document.getElementById('menu-list').appendChild(li);
+            });
+
+            updateView();
+        }
+
+        // 화면 업데이트
+        function updateView() {
+            // 슬라이드 표시/숨김
+            for (let i = 0; i < totalSlides; i++) {
+                const el = document.getElementById(`slide-${i}`);
+                if (i === currentSlide) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            }
+
+            // 진행바 및 카운터
+            progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+            counterEl.textContent = `${(currentSlide + 1).toString().padStart(2,'0')} — ${totalSlides.toString().padStart(2,'0')}`;
+
+            // 버튼 상태
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === totalSlides - 1;
+
+            // 메뉴 하이라이트
+            const menuBtns = document.querySelectorAll('#menu-list button');
+            menuBtns.forEach((btn, idx) => {
+                if(idx === currentSlide) {
+                    btn.classList.remove('text-gray-300');
+                    btn.classList.add('text-black');
+                } else {
+                    btn.classList.add('text-gray-300');
+                    btn.classList.remove('text-black');
+                }
+            });
+        }
+
+        // 네비게이션 함수
+        function next() { if (currentSlide < totalSlides - 1) { currentSlide++; updateView(); } }
+        function prev() { if (currentSlide > 0) { currentSlide--; updateView(); } }
+        function goToSlide(idx) { 
+            currentSlide = idx; 
+            updateView();
+            toggleMenu(false);
+        }
+
+        // 메뉴 토글
+        function toggleMenu(show) {
+            const overlay = document.getElementById('menu-overlay');
+            if (show) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('pointer-events-auto');
+            } else {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                overlay.classList.remove('pointer-events-auto');
+            }
+        }
+
+        // 이벤트 리스너
+        document.getElementById('next-btn').addEventListener('click', next);
+        document.getElementById('prev-btn').addEventListener('click', prev);
+        document.getElementById('menu-btn').addEventListener('click', () => toggleMenu(true));
+        document.getElementById('close-menu-btn').addEventListener('click', () => toggleMenu(false));
+
+        // 키보드 조작
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight' || e.key === ' ') next();
+            if(e.key === 'ArrowLeft') prev();
+        });
+
+        // 터치 스와이프
+        let touchStart = 0;
+        window.addEventListener('touchstart', e => touchStart = e.changedTouches[0].clientX);
+        window.addEventListener('touchend', e => {
+            const touchEnd = e.changedTouches[0].clientX;
+            if (touchStart - touchEnd > 50) next();
+            if (touchEnd - touchStart > 50) prev();
+        });
+
+        // 실행
+        init();
+
+    </script>
+</body>
+</html>
+
