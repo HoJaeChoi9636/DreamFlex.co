@@ -1,349 +1,231 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Menu, X } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>문화부 전시 관람 가이드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 부드러운 화면 전환 애니메이션 */
+        .slide-enter {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 텍스트 줄바꿈 처리 */
+        .whitespace-pre-wrap { white-space: pre-wrap; }
+    </style>
+</head>
+<body class="bg-white text-black font-sans overflow-hidden select-none touch-pan-y">
 
-const slidesData = [
-  {
-    type: "title",
-    title: "문화부원으로서\n전시 관람하기",
-    content: "",
-    sub: "학습목표: 전시 관람 목적과 방법을 이해하고, 문화부원으로서 전시회를 관람하며 다양한 표현 방식과 느낌을 하늘문화에 적용합니다."
-  },
-  {
-    type: "list",
-    title: "목차",
-    items: [
-      "들어가는 말",
-      "전시 관람의 목적",
-      "전시 관람 방법",
-      "문화부원으로서의 전시 관람 자세",
-      "마치는 말"
-    ]
-  },
-  {
-    type: "simple",
-    title: "들어가는 말",
-    content: "미술대학을 졸업한 발표자의 경험에 기반한 전시 관람 노하우를 공유하고자 합니다.\n\n어떻게 하면 전시를 보고 난 후 사진이 아닌 경험이 남을 수 있을지 고민했으니, 잘 들어보고 시도해 보시길 바랍니다."
-  },
-  {
-    type: "split",
-    section: "전시 관람의 목적",
-    title: "1) 개인으로서의 목적",
-    content: "개인으로서 삶을 살아가며 느끼는 감정을 다양한 형태로 구체화하는 것입니다.\n\n우리가 매 순간 느끼는 다양한 감정은 문자와 말로 전부 표현할 수 없습니다. 예술은 문자 언어라는 틀에 가둘 수 없는 나의 감정을 대변하는 또 다른 언어이자 ‘말’이 되어줍니다."
-  },
-  {
-    type: "split",
-    section: "전시 관람의 목적",
-    title: "2) 창작자로서의 목적",
-    content: "직접 경험하지 못한 다양한 표현 방식과 그 효과를 체험하는 것입니다."
-  },
-  {
-    type: "step",
-    step: "0",
-    title: "관람하는 ‘나’를 분석하기",
-    content: "가장 먼저 파악해야 하는 것은 전시를 바라보는 주체인 ‘나’ 자신입니다.\n\n내가 놓인 상황, 함께하는 사람, 하고 있는 고민, 감정 상태에 따라 작품은 나에게 다르게 다가옵니다."
-  },
-  {
-    type: "step",
-    step: "1",
-    title: "작품을 있는 그대로 느끼기",
-    content: "나를 파악했다면 지금의 나로서 작품을 바라봅니다.\n\n객관적일 필요 없고 객관적일 수 없습니다. 지금의 내가 이 작품을 바라보고 느끼는 것들을 적어봅니다."
-  },
-  {
-    type: "step",
-    step: "2",
-    title: "주관적으로 작품 분석하기",
-    content: "작품의 첫 느낌을 적었다면, 이제 그 느낌을 만들어내는 요소들을 찾아봅니다.\n\n이 작품의 어떤 요소가, 어떤 표현이, 어떤 형태가, 어떤 색이, 또 그러한 요소들의 조합이 내게 그 느낌을 주었는지 지극히 주관적으로 분석하고 적어봅니다."
-  },
-  {
-    type: "step",
-    step: "3",
-    title: "작가에 대해 알아보기",
-    content: "이제 이 작품을 제작한 작가에 대해 알아봅니다.\n\n전시장에 있는 작가 정보를 확인하거나 인터넷에 검색해 봅니다. 이 단계는 생략해도 무관합니다."
-  },
-  {
-    type: "step",
-    step: "4",
-    title: "작가의 의도 유추하기",
-    content: "작가가 가진 가치관과 거쳐온 삶을 토대로 내가 작가라면 이 작품을 어떤 의도로 만들었을지 유추해 봅니다.\n\n단순히 표현의 탐구였을까요? 감정의 표출일까요? 어떤 감정일까요? 메시지를 전달하고 싶었을까요? 어떤 메시지일까요?"
-  },
-  {
-    type: "step",
-    step: "5",
-    title: "작가의 의도 확인하기",
-    content: "이제 텍스트를 읽고 작가의 의도와 나의 예상을 비교해 봅니다.\n\n같을 필요 없고, 같을 수도 없습니다."
-  },
-  {
-    type: "step",
-    step: "6",
-    title: "전시에 대한 주관적인\n평가와 피드백",
-    content: "위에 적은 내용을 토대로 종합적인 작품에 대한 주관적인 평가와 나라면 어떻게 했을지 피드백을 적어봅니다.\n\n의도가 나에게 전달되지 않았다면 어떤 표현이 문제였는지, 나라면 어떻게 표현했을지 적어봅니다.\n\n표현이, 표현과 표현의 조합이 어떤 느낌을 만들어내는지 새롭게 알게 된 사실을 기록합니다."
-  },
-  {
-    type: "simple",
-    title: "문화부원으로서의\n전시 관람 자세",
-    content: "문화부는 어떤 사명일까요? 우리는 표현 방식을 탐구하는 사명이 아니라 하늘의 뜻을 표현에 담아 전달해야 하는 사명입니다. 하늘의 것은 좋게 느끼게 하고, 사단의 것은 안 좋게 느끼게 해야 합니다. 느낌을 의도하고 표현을 계산할 줄 알아야 합니다.\n\n전시를 관람한다는 것은 내가 사용해보지 못한 표현들, 내가 경험해보지 못한 표현들과 표현과 표현의 조합에 대한 선례를 보는 일입니다. 선례를 통해 느낌말들을 수집하고 교회와 전도 현장에서 있어지는 다양한 상황들 속 다양한 마음 가운데 하나님의 말씀을 좋은 느낌으로 전달할 수 있도록 고민하고 적용해 봅시다.\n\n세상의 작품은 부정적인 감정과 느낌을 다루는 경우가 많습니다. 무분별하게 멋지다, 힙하다라고 생각하지 않고 비판적으로 하늘문화에 적용할 수 있는지 생각하며 평가하면 좋을 것입니다. 또한 밝고 긍정적인 감정을 다루는 작품이 있다면 잘 분석하고 기록하여 참고해야 할 것입니다."
-  },
-  {
-    type: "title",
-    title: "마치는 말",
-    content: "",
-    sub: "발표자의 경험을 기반한 주관적인 교육입니다. 절대적으로 따를 필요는 없지만 각자의 사명에 좋은 참고가 되었길 바라며 교육을 마칩니다."
-  }
-];
-
-export default function App() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const touchStart = useRef(null);
-  const touchEnd = useRef(null);
-
-  const totalSlides = slidesData.length;
-
-  const nextSlide = () => {
-    if (currentSlide < totalSlides - 1) {
-      setDirection(1);
-      setCurrentSlide(curr => curr + 1);
-    }
-  };
-
-  const prevSlide = () => {
-    if (currentSlide > 0) {
-      setDirection(-1);
-      setCurrentSlide(curr => curr - 1);
-    }
-  };
-
-  const goToSlide = (index) => {
-    setDirection(index > currentSlide ? 1 : -1);
-    setCurrentSlide(index);
-    setIsMenuOpen(false);
-  };
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
-      if (e.key === 'ArrowLeft') prevSlide();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentSlide]);
-
-  // Touch navigation
-  const onTouchStart = (e) => {
-    touchEnd.current = null;
-    touchStart.current = e.targetTouches[0].clientX;
-  };
-
-  const onTouchMove = (e) => {
-    touchEnd.current = e.targetTouches[0].clientX;
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart.current || !touchEnd.current) return;
-    const distance = touchStart.current - touchEnd.current;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe) nextSlide();
-    if (isRightSwipe) prevSlide();
-  };
-
-  return (
-    <div 
-      className="relative w-full h-screen overflow-hidden bg-white text-black font-sans selection:bg-black selection:text-white"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
-      {/* Progress Bar */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 z-50">
-        <div 
-          className="h-full bg-black transition-all duration-300 ease-out"
-          style={{ width: `${((currentSlide + 1) / totalSlides) * 100}%` }}
-        />
-      </div>
-
-      {/* Header / Nav */}
-      <header className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-40 bg-white/80 backdrop-blur-sm">
-        <div className="text-xs font-bold tracking-widest uppercase">
-          Cultural Dept. Guide
-        </div>
-        <button 
-          onClick={() => setIsMenuOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <Menu size={24} />
-        </button>
-      </header>
-
-      {/* Menu Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col p-8 animate-fade-in">
-          <div className="flex justify-end mb-8">
-            <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-              <X size={32} />
-            </button>
-          </div>
-          <nav className="flex-1 overflow-y-auto">
-            <ul className="space-y-4">
-              {slidesData.map((slide, idx) => (
-                <li key={idx}>
-                  <button 
-                    onClick={() => goToSlide(idx)}
-                    className={`text-2xl font-bold text-left w-full hover:translate-x-2 transition-transform ${currentSlide === idx ? 'text-black' : 'text-gray-300'}`}
-                  >
-                    <span className="text-sm mr-4 text-gray-400 font-normal align-middle">
-                      {(idx + 1).toString().padStart(2, '0')}
-                    </span>
-                    {slide.title.replace(/\n/g, ' ')}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <main className="w-full h-full flex items-center justify-center relative px-6 md:px-20">
-        <div className="w-full max-w-6xl mx-auto">
-          {slidesData.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 w-full h-full flex flex-col justify-center transition-all duration-700 ease-in-out px-6 md:px-20
-                ${index === currentSlide ? 'opacity-100 translate-y-0 visible delay-100' : 
-                  index < currentSlide ? 'opacity-0 -translate-y-10 invisible' : 'opacity-0 translate-y-10 invisible'
-                }`}
-            >
-              <SlideContent data={slide} />
-            </div>
-          ))}
-        </div>
-      </main>
-
-      {/* Navigation Controls */}
-      <div className="absolute bottom-8 right-8 flex gap-4 z-40">
-        <button 
-          onClick={prevSlide}
-          disabled={currentSlide === 0}
-          className="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white hover:border-black disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-black transition-all"
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <button 
-          onClick={nextSlide}
-          disabled={currentSlide === totalSlides - 1}
-          className="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white hover:border-black disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-black transition-all"
-        >
-          <ChevronRight size={24} />
-        </button>
-      </div>
-
-      {/* Slide Counter */}
-      <div className="absolute bottom-8 left-8 text-xs font-mono tracking-widest text-gray-400">
-        {(currentSlide + 1).toString().padStart(2, '0')} — {totalSlides.toString().padStart(2, '0')}
-      </div>
+    <div class="absolute top-0 left-0 w-full h-1 bg-gray-100 z-50">
+        <div id="progress-bar" class="h-full bg-black transition-all duration-300 ease-out" style="width: 0%"></div>
     </div>
-  );
-}
 
-// Slide Content Component
-function SlideContent({ data }) {
-  const formatText = (text) => {
-    return text.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
-        {line}
-        <br />
-      </React.Fragment>
-    ));
-  };
+    <header class="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-40 bg-white/80 backdrop-blur-sm">
+        <div class="text-xs font-bold tracking-widest uppercase">Cultural Dept. Guide</div>
+        <button onclick="toggleMenu()" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+        </button>
+    </header>
 
-  switch (data.type) {
-    case 'title':
-      return (
-        <div className="max-w-4xl">
-          <h1 className="text-5xl md:text-8xl font-black mb-12 leading-tight whitespace-pre-wrap">
-            {data.title}
-          </h1>
-          <div className="h-1 w-20 bg-black mb-12" />
-          <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl font-light">
-            {formatText(data.sub)}
-          </p>
+    <div id="menu-overlay" class="fixed inset-0 z-50 bg-white hidden flex-col p-8">
+        <div class="flex justify-end mb-8">
+            <button onclick="toggleMenu()" class="p-2 hover:bg-gray-100 rounded-full">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
-      );
+        <nav class="flex-1 overflow-y-auto">
+            <ul id="menu-list" class="space-y-4">
+                </ul>
+        </nav>
+    </div>
 
-    case 'list':
-      return (
-        <div className="w-full max-w-4xl">
-          <h2 className="text-sm font-bold tracking-[0.2em] text-gray-400 mb-16 uppercase border-b pb-4">
-            Index
-          </h2>
-          <ul className="space-y-8">
-            {data.items.map((item, i) => (
-              <li key={i} className="text-2xl md:text-4xl font-bold flex items-baseline group cursor-default">
-                <span className="text-sm font-mono mr-8 text-gray-300 group-hover:text-black transition-colors">
-                  {(i + 1).toString().padStart(2, '0')}
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
+    <main id="slide-container" class="w-full h-screen flex items-center justify-center px-6 md:px-20 pt-10 pb-20 overflow-y-auto">
+        </main>
 
-    case 'step':
-      return (
-        <div className="w-full flex flex-col md:flex-row gap-12 md:gap-24 items-start md:items-center h-full pt-20 pb-20">
-          <div className="flex-shrink-0">
-             <div className="text-[120px] md:text-[200px] leading-none font-black text-gray-100 select-none -ml-2 md:-ml-4">
-              {data.step}
-             </div>
-          </div>
-          <div className="flex-1">
-            <h2 className="text-3xl md:text-5xl font-bold mb-10 leading-snug whitespace-pre-wrap">
-              {data.title}
-            </h2>
-            <div className="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap">
-              {data.content}
-            </div>
-          </div>
-        </div>
-      );
+    <div class="absolute bottom-8 right-8 flex gap-4 z-40">
+        <button onclick="prevSlide()" id="btn-prev" class="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all disabled:opacity-30">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <button onclick="nextSlide()" id="btn-next" class="p-3 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all disabled:opacity-30">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+    </div>
 
-    case 'split':
-      return (
-        <div className="w-full">
-           <span className="inline-block px-3 py-1 border border-black rounded-full text-xs font-bold mb-8 uppercase tracking-wider">
-             {data.section}
-           </span>
-           <h2 className="text-3xl md:text-5xl font-bold mb-10">
-             {data.title}
-           </h2>
-           <p className="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap max-w-3xl">
-             {data.content}
-           </p>
-        </div>
-      );
+    <div class="absolute bottom-8 left-8 text-xs font-mono tracking-widest text-gray-400">
+        <span id="current-page">01</span> — <span id="total-page">00</span>
+    </div>
 
-    default: // simple
-      return (
-        <div className="w-full max-w-4xl">
-          <h2 className="text-4xl md:text-6xl font-bold mb-16 whitespace-pre-wrap">
-            {data.title}
-          </h2>
-          <div className="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap">
-            {data.content}
-          </div>
-          {data.sub && (
-             <div className="mt-12 pt-12 border-t border-gray-100 text-gray-500 font-light">
-               {data.sub}
-             </div>
-          )}
-        </div>
-      );
-  }
-}
+    <script>
+        // --- 데이터 부분 (수정이 필요하면 여기를 고치세요) ---
+        const slidesData = [
+            { type: "title", title: "문화부원으로서\n전시 관람하기", content: "", sub: "학습목표: 전시 관람 목적과 방법을 이해하고, 문화부원으로서 전시회를 관람하며 다양한 표현 방식과 느낌을 하늘문화에 적용합니다." },
+            { type: "list", title: "목차", items: ["들어가는 말", "전시 관람의 목적", "전시 관람 방법", "문화부원으로서의 전시 관람 자세", "마치는 말"] },
+            { type: "simple", title: "들어가는 말", content: "미술대학을 졸업한 발표자의 경험에 기반한 전시 관람 노하우를 공유하고자 합니다.\n\n어떻게 하면 전시를 보고 난 후 사진이 아닌 경험이 남을 수 있을지 고민했으니, 잘 들어보고 시도해 보시길 바랍니다." },
+            { type: "split", section: "전시 관람의 목적", title: "1) 개인으로서의 목적", content: "개인으로서 삶을 살아가며 느끼는 감정을 다양한 형태로 구체화하는 것입니다.\n\n우리가 매 순간 느끼는 다양한 감정은 문자와 말로 전부 표현할 수 없습니다. 예술은 문자 언어라는 틀에 가둘 수 없는 나의 감정을 대변하는 또 다른 언어이자 ‘말’이 되어줍니다." },
+            { type: "split", section: "전시 관람의 목적", title: "2) 창작자로서의 목적", content: "직접 경험하지 못한 다양한 표현 방식과 그 효과를 체험하는 것입니다." },
+            { type: "step", step: "0", title: "관람하는 ‘나’를 분석하기", content: "가장 먼저 파악해야 하는 것은 전시를 바라보는 주체인 ‘나’ 자신입니다.\n\n내가 놓인 상황, 함께하는 사람, 하고 있는 고민, 감정 상태에 따라 작품은 나에게 다르게 다가옵니다." },
+            { type: "step", step: "1", title: "작품을 있는 그대로 느끼기", content: "나를 파악했다면 지금의 나로서 작품을 바라봅니다.\n\n객관적일 필요 없고 객관적일 수 없습니다. 지금의 내가 이 작품을 바라보고 느끼는 것들을 적어봅니다." },
+            { type: "step", step: "2", title: "주관적으로 작품 분석하기", content: "작품의 첫 느낌을 적었다면, 이제 그 느낌을 만들어내는 요소들을 찾아봅니다.\n\n이 작품의 어떤 요소가, 어떤 표현이, 어떤 형태가, 어떤 색이, 또 그러한 요소들의 조합이 내게 그 느낌을 주었는지 지극히 주관적으로 분석하고 적어봅니다." },
+            { type: "step", step: "3", title: "작가에 대해 알아보기", content: "이제 이 작품을 제작한 작가에 대해 알아봅니다.\n\n전시장에 있는 작가 정보를 확인하거나 인터넷에 검색해 봅니다. 이 단계는 생략해도 무관합니다." },
+            { type: "step", step: "4", title: "작가의 의도 유추하기", content: "작가가 가진 가치관과 거쳐온 삶을 토대로 내가 작가라면 이 작품을 어떤 의도로 만들었을지 유추해 봅니다.\n\n단순히 표현의 탐구였을까요? 감정의 표출일까요? 어떤 감정일까요? 메시지를 전달하고 싶었을까요? 어떤 메시지일까요?" },
+            { type: "step", step: "5", title: "작가의 의도 확인하기", content: "이제 텍스트를 읽고 작가의 의도와 나의 예상을 비교해 봅니다.\n\n같을 필요 없고, 같을 수도 없습니다." },
+            { type: "step", step: "6", title: "전시에 대한 주관적인\n평가와 피드백", content: "위에 적은 내용을 토대로 종합적인 작품에 대한 주관적인 평가와 나라면 어떻게 했을지 피드백을 적어봅니다.\n\n의도가 나에게 전달되지 않았다면 어떤 표현이 문제였는지, 나라면 어떻게 표현했을지 적어봅니다.\n\n표현이, 표현과 표현의 조합이 어떤 느낌을 만들어내는지 새롭게 알게 된 사실을 기록합니다." },
+            { type: "simple", title: "문화부원으로서의\n전시 관람 자세", content: "문화부는 어떤 사명일까요? 우리는 표현 방식을 탐구하는 사명이 아니라 하늘의 뜻을 표현에 담아 전달해야 하는 사명입니다. 하늘의 것은 좋게 느끼게 하고, 사단의 것은 안 좋게 느끼게 해야 합니다. 느낌을 의도하고 표현을 계산할 줄 알아야 합니다.\n\n전시를 관람한다는 것은 내가 사용해보지 못한 표현들, 내가 경험해보지 못한 표현들과 표현과 표현의 조합에 대한 선례를 보는 일입니다. 선례를 통해 느낌말들을 수집하고 교회와 전도 현장에서 있어지는 다양한 상황들 속 다양한 마음 가운데 하나님의 말씀을 좋은 느낌으로 전달할 수 있도록 고민하고 적용해 봅시다.\n\n세상의 작품은 부정적인 감정과 느낌을 다루는 경우가 많습니다. 무분별하게 멋지다, 힙하다라고 생각하지 않고 비판적으로 하늘문화에 적용할 수 있는지 생각하며 평가하면 좋을 것입니다. 또한 밝고 긍정적인 감정을 다루는 작품이 있다면 잘 분석하고 기록하여 참고해야 할 것입니다." },
+            { type: "title", title: "마치는 말", content: "", sub: "발표자의 경험을 기반한 주관적인 교육입니다. 절대적으로 따를 필요는 없지만 각자의 사명에 좋은 참고가 되었길 바라며 교육을 마칩니다." }
+        ];
 
+        // --- 로직 부분 ---
+        let currentSlide = 0;
+        const totalSlides = slidesData.length;
+        const container = document.getElementById('slide-container');
+        
+        // 초기화
+        function init() {
+            document.getElementById('total-page').innerText = totalSlides.toString().padStart(2, '0');
+            renderSlide();
+            createMenu();
+        }
 
+        // 슬라이드 렌더링
+        function renderSlide() {
+            const data = slidesData[currentSlide];
+            let html = '';
+
+            // 줄바꿈 처리 함수
+            const fmt = (text) => text ? text.replace(/\n/g, '<br/>') : '';
+
+            // 타입별 템플릿
+            if (data.type === 'title') {
+                html = `
+                    <div class="max-w-4xl slide-enter">
+                        <h1 class="text-5xl md:text-8xl font-black mb-12 leading-tight whitespace-pre-wrap">${data.title}</h1>
+                        <div class="h-1 w-20 bg-black mb-12"></div>
+                        <p class="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl font-light">${fmt(data.sub)}</p>
+                    </div>`;
+            } else if (data.type === 'list') {
+                const items = data.items.map((item, i) => 
+                    `<li class="text-2xl md:text-4xl font-bold flex items-baseline mb-8">
+                        <span class="text-sm font-mono mr-8 text-gray-300">${(i + 1).toString().padStart(2, '0')}</span>
+                        ${item}
+                    </li>`
+                ).join('');
+                html = `
+                    <div class="w-full max-w-4xl slide-enter">
+                        <h2 class="text-sm font-bold tracking-[0.2em] text-gray-400 mb-16 uppercase border-b pb-4">Index</h2>
+                        <ul>${items}</ul>
+                    </div>`;
+            } else if (data.type === 'step') {
+                html = `
+                    <div class="w-full flex flex-col md:flex-row gap-8 md:gap-24 items-start md:items-center h-full slide-enter">
+                        <div class="flex-shrink-0">
+                            <div class="text-[100px] md:text-[200px] leading-none font-black text-gray-100 select-none -ml-2 md:-ml-4">${data.step}</div>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="text-3xl md:text-5xl font-bold mb-8 leading-snug whitespace-pre-wrap">${data.title}</h2>
+                            <div class="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap">${fmt(data.content)}</div>
+                        </div>
+                    </div>`;
+            } else if (data.type === 'split') {
+                html = `
+                    <div class="w-full slide-enter">
+                        <span class="inline-block px-3 py-1 border border-black rounded-full text-xs font-bold mb-8 uppercase tracking-wider">${data.section}</span>
+                        <h2 class="text-3xl md:text-5xl font-bold mb-10">${data.title}</h2>
+                        <p class="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap max-w-3xl">${fmt(data.content)}</p>
+                    </div>`;
+            } else { // simple
+                html = `
+                    <div class="w-full max-w-4xl slide-enter">
+                        <h2 class="text-4xl md:text-6xl font-bold mb-16 whitespace-pre-wrap">${data.title}</h2>
+                        <div class="text-lg md:text-xl text-gray-600 leading-loose font-light whitespace-pre-wrap">${fmt(data.content)}</div>
+                        ${data.sub ? `<div class="mt-12 pt-12 border-t border-gray-100 text-gray-500 font-light">${fmt(data.sub)}</div>` : ''}
+                    </div>`;
+            }
+
+            container.innerHTML = html;
+            updateUI();
+        }
+
+        function updateUI() {
+            // 진행 바
+            document.getElementById('progress-bar').style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+            // 페이지 번호
+            document.getElementById('current-page').innerText = (currentSlide + 1).toString().padStart(2, '0');
+            // 버튼 활성/비활성
+            document.getElementById('btn-prev').disabled = currentSlide === 0;
+            document.getElementById('btn-next').disabled = currentSlide === totalSlides - 1;
+        }
+
+        // 네비게이션 함수
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                renderSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                renderSlide();
+            }
+        }
+
+        function jumpTo(index) {
+            currentSlide = index;
+            renderSlide();
+            toggleMenu();
+        }
+
+        // 메뉴 토글
+        function toggleMenu() {
+            const menu = document.getElementById('menu-overlay');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        }
+
+        // 메뉴 생성
+        function createMenu() {
+            const list = document.getElementById('menu-list');
+            list.innerHTML = slidesData.map((slide, idx) => `
+                <li>
+                    <button onclick="jumpTo(${idx})" class="text-2xl font-bold text-left w-full hover:translate-x-2 transition-transform text-black">
+                        <span class="text-sm mr-4 text-gray-400 font-normal align-middle">${(idx + 1).toString().padStart(2, '0')}</span>
+                        ${slide.title.replace(/\n/g, ' ')}
+                    </button>
+                </li>
+            `).join('');
+        }
+
+        // 키보드 이벤트
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        // 터치 스와이프 이벤트
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        window.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, false);
+
+        window.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, false);
+
+        function handleSwipe() {
+            if (touchStartX - touchEndX > 50) nextSlide();
+            if (touchEndX - touchStartX > 50) prevSlide();
+        }
+
+        // 시작
+        init();
+    </script>
+</body>
+</html>
